@@ -1,11 +1,11 @@
 /* Cache-first service worker. Bump CACHE when you change any file. */
-const CACHE = 'fruit-slash-v2';
+const CACHE = 'fruit-slash-v5';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './main.js',
   './css/style.css',
   './engine/app.js', './engine/view.js', './engine/scene.js', './engine/input.js',
   './engine/particles.js', './engine/audio.js', './engine/ui.js',
-  './engine/pwa.js', './engine/util.js',
+  './engine/pwa.js', './engine/util.js', './engine/scores.js',
   './games/fruit-slash/index.js', './games/fruit-slash/fruits.js',
   './games/fruit-slash/director.js', './games/fruit-slash/background.js',
   './icons/icon-192.png', './icons/icon-512.png'

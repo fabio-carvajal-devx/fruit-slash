@@ -6,7 +6,8 @@ import { sfx } from './engine/audio.js';
 import { goImmersive, releaseWake, guardGestures, registerSW } from './engine/pwa.js';
 import { FruitSlash } from './games/fruit-slash/index.js';
 
-const ui = new UI();
+const GAME = { id: 'fruit-slash', title: 'Fruit Slash' };
+const ui = new UI(GAME.id);
 const app = new App(document.getElementById('game'));
 
 const scene = new FruitSlash({
@@ -24,7 +25,8 @@ app.scene = scene;
 async function play() {
   audio.unlock();
   sfx.tap();
-  await goImmersive();
+  goImmersive();            // never awaited: a browser that stalls or refuses
+                            // fullscreen must not be able to block the round
   ui.hideScreens();
   ui.setHud(true);
   ui.score(0);
@@ -71,6 +73,8 @@ on('againBtn', () => { app.hold(); scene.leave(); play(); });
 on('homeBtn', goHome);
 on('endHomeBtn', goHome);
 on('settingsBtn', () => { sfx.tap(); ui.show('s-settings'); });
+on('scoresBtn', () => { sfx.tap(); ui.showScores(); });
+on('closeScores', () => { sfx.tap(); ui.show('s-start'); });
 on('closeSettings', () => { sfx.tap(); ui.show('s-start'); });
 
 addEventListener('keydown', e => {

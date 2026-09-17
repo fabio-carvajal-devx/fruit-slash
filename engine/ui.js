@@ -1,40 +1,50 @@
-/* Screens, HUD and settings. The canvas never draws a single letter of
-   chrome — text lives in the DOM so it stays sharp and accessible. */
+/* --------------------------------------------------------------
+   The shared cabinet shell: screens, HUD, settings and the arcade
+   leaderboard. Every game in this project uses this same shell, so
+   the theme, the record flow and the name entry stay identical.
+   -------------------------------------------------------------- */
 import * as audio from './audio.js';
 import { sfx } from './audio.js';
+import { Scores } from './scores.js';
 
 const $ = id => document.getElementById(id);
-const KEY = 'fruit-slash/v1';
-
-const DEFAULTS = { duration: 90, bombs: 1, sound: 1, speed: 1, best: 0 };
+const DEFAULTS = { duration: 90, bombs: 1, sound: 1, speed: 1 };
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
 export class UI {
-  constructor() {
+  constructor(gameId) {
+    this.game = gameId;
+    this.key = `arcade/settings/${gameId}`;   // per game, one store shape
     this.save = this.load();
     audio.setEnabled(!!this.save.sound);
 
     this.el = {
-      hud: $('hud'), pause: $('pauseBtn'),
+      hud: $('hud'),
       clockBar: $('clockBar'), clockFill: $('clockBar').firstElementChild, clockText: $('clockText'),
       score: $('scoreVal'), banner: $('banner'),
       screens: [...document.querySelectorAll('.screen')],
-      bestStart: $('bestStart'), bestEnd: $('bestEnd'), newBest: $('newBest'),
-      endScore: $('endScore'), endStats: $('endStats'), stars: $('stars'),
+      bestStart: $('bestStart'), bestName: $('bestName'),
+      endScore: $('endScore'), endStats: $('endStats'), endBoard: $('endBoard'),
+      endRank: $('endRank'), stars: $('stars'),
+      scoreBoard: $('scoreBoard'), nameSlots: $('nameSlots'), nameTitle: $('nameTitle'),
       countNum: $('countNum'),
       tint: {
         freeze: $('tint-freeze'), double: $('tint-double'),
         frenzy: $('tint-frenzy'), bomb: $('tint-bomb')
       }
     };
-    this.el.bestStart.textContent = this.save.best;
+
+    this.buildNameEntry();
     this.bindSegments();
+    this.refreshBest();
   }
 
+  /* ------------------------------ settings ------------------------------ */
   load() {
-    try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; }
+    try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(this.key) || '{}') }; }
     catch { return { ...DEFAULTS }; }
   }
-  persist() { try { localStorage.setItem(KEY, JSON.stringify(this.save)); } catch {} }
+  persist() { try { localStorage.setItem(this.key, JSON.stringify(this.save)); } catch {} }
 
   bindSegments() {
     const map = { optTime: 'duration', optBombs: 'bombs', optSound: 'sound', optSpeed: 'speed' };
@@ -45,18 +55,16 @@ export class UI {
       box.addEventListener('click', e => {
         const b = e.target.closest('button'); if (!b) return;
         this.save[key] = Number(b.dataset.v);
-        if (key === 'sound') { audio.setEnabled(!!this.save.sound); }
+        if (key === 'sound') audio.setEnabled(!!this.save.sound);
         this.persist(); paint(); sfx.tap();
       });
       paint();
     }
   }
 
-  show(id) {
-    this.el.screens.forEach(s => s.classList.toggle('show', s.id === id));
-  }
+  /* ------------------------------ screens ------------------------------ */
+  show(id) { this.el.screens.forEach(s => s.classList.toggle('show', s.id === id)); }
   hideScreens() { this.el.screens.forEach(s => s.classList.remove('show')); }
-
   setHud(on) { this.el.hud.hidden = !on; }
 
   score(v) {
@@ -91,13 +99,9 @@ export class UI {
   flashBomb() {
     const t = this.el.tint.bomb;
     t.style.transition = 'none'; t.classList.add('on');
-    requestAnimationFrame(() => {
-      t.style.transition = 'opacity .5s ease';
-      t.classList.remove('on');
-    });
+    requestAnimationFrame(() => { t.style.transition = 'opacity .5s ease'; t.classList.remove('on'); });
   }
 
-  /** 3 - 2 - 1 - GO, resolves when the round may begin. */
   countdown() {
     return new Promise(resolve => {
       const steps = ['3', '2', '1', 'GO!'];
@@ -116,28 +120,112 @@ export class UI {
     });
   }
 
-  end(r) {
-    const isBest = r.score > this.save.best;
-    if (isBest) { this.save.best = r.score; this.persist(); }
-    this.el.bestStart.textContent = this.save.best;
-    this.el.bestEnd.textContent = this.save.best;
-    this.el.newBest.hidden = !isBest;
-    this.el.endScore.textContent = r.score;
+  /* ------------------------------ leaderboard ------------------------------ */
+  refreshBest() {
+    const b = Scores.best(this.game);
+    this.el.bestStart.textContent = b ? b.score : 0;
+    this.el.bestName.textContent = b ? b.name : '';
+  }
 
+  renderBoard(el, list, highlight = -1) {
+    if (!list.length) { el.innerHTML = '<li class="empty">NO SCORES YET</li>'; return; }
+    el.innerHTML = list.map((e, i) =>
+      `<li class="${i === highlight ? 'you' : ''}"><span>${e.name}</span><b>${e.score}</b></li>`
+    ).join('');
+  }
+
+  showScores() { this.renderBoard(this.el.scoreBoard, Scores.top(this.game, 10)); this.show('s-scores'); }
+
+  /** Arcade three-character entry. Resolves with the chosen name. */
+  buildNameEntry() {
+    this.letters = ['A', 'A', 'A'];
+    this.el.nameSlots.innerHTML = '';
+    this.slotEls = [0, 1, 2].map(i => {
+      const slot = document.createElement('div');
+      slot.className = 'slot';
+      slot.innerHTML = '<button aria-label="up">▲</button><b>A</b><button aria-label="down">▼</button>';
+      const [up, chr, down] = slot.children;
+      const move = d => {
+        const k = (ALPHABET.indexOf(this.letters[i]) + d + ALPHABET.length) % ALPHABET.length;
+        this.letters[i] = ALPHABET[k];
+        chr.textContent = this.letters[i];
+        chr.classList.remove('roll'); void chr.offsetWidth; chr.classList.add('roll');
+        sfx.tap();
+      };
+      up.addEventListener('click', () => move(1));
+      down.addEventListener('click', () => move(-1));
+      chr.addEventListener('click', () => move(1));
+      this.el.nameSlots.appendChild(slot);
+      return chr;
+    });
+
+    this.onKeyName = e => {
+      if (!this.pendingName) return;
+      const c = e.key.toUpperCase();
+      if (ALPHABET.includes(c) && c.length === 1) {
+        this.letters[this.cursor % 3] = c;
+        this.slotEls[this.cursor % 3].textContent = c;
+        this.cursor++;
+      } else if (e.key === 'Enter') $('nameOk').click();
+      else if (e.key === 'Backspace') this.cursor = Math.max(0, this.cursor - 1);
+    };
+    addEventListener('keydown', this.onKeyName);
+
+    $('nameOk').addEventListener('click', () => {
+      if (!this.pendingName) return;
+      sfx.tap();
+      const done = this.pendingName;
+      this.pendingName = null;
+      done(this.letters.join(''));
+    });
+  }
+
+  askName(initial, title) {
+    this.letters = (initial || 'AAA').padEnd(3, 'A').slice(0, 3).toUpperCase().split('');
+    this.slotEls.forEach((el, i) => { el.textContent = this.letters[i]; });
+    this.cursor = 0;
+    this.el.nameTitle.textContent = title;
+    this.show('s-name');
+    return new Promise(res => { this.pendingName = res; });
+  }
+
+  /* ------------------------------ round over ------------------------------ */
+  async end(r) {
+    this.setHud(false);
+    this.effect({ freeze: 0, double: 0, frenzy: 0 });
+
+    this.el.endScore.textContent = r.score;
     const per = r.duration / 60;
     const tiers = [180 * per, 420 * per, 720 * per];
     [...this.el.stars.children].forEach((s, i) => {
       s.classList.remove('lit');
       if (r.score >= tiers[i]) setTimeout(() => s.classList.add('lit'), 120 + i * 140);
     });
-
     this.el.endStats.innerHTML = `
       <li>FRUIT<b>${r.sliced}</b></li>
       <li>EXTRA CHOPS<b>${r.chops || 0}</b></li>
       <li>BEST COMBO<b>x${r.combo || 0}</b></li>
       <li>BOMBS<b>${r.bombs}</b></li>`;
-    this.effect({ freeze: 0, double: 0, frenzy: 0 });
-    this.setHud(false);
+
+    const rank = Scores.rank(this.game, r.score);
+    this.el.endRank.hidden = true;
+    this.renderBoard(this.el.endBoard, Scores.top(this.game, 5));
     this.show('s-end');
+
+    if (rank === null) return;
+
+    // made the board — let the score land, then take their name
+    sfx.record();
+    await new Promise(res => setTimeout(res, 900));
+    const name = await this.askName(Scores.lastName(),
+      rank === 1 ? 'NEW RECORD!' : `TOP ${rank}!`);
+    const res = Scores.add(this.game, name, r.score);
+
+    this.el.endRank.hidden = false;
+    this.el.endRank.textContent = res.isRecord ? '★ NEW RECORD ★' : `#${res.rank} ON THE BOARD`;
+    this.renderBoard(this.el.endBoard, res.list.slice(0, 5), res.rank <= 5 ? res.rank - 1 : -1);
+    this.refreshBest();
+    this.show('s-end');
+    sfx.combo(5);
   }
 }

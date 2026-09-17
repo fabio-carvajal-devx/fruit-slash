@@ -77,5 +77,10 @@ export const sfx = {
   tick() { tone(1400, .06, { type: 'square', gain: .12 }); },
   go() { [523, 659, 880].forEach((f, i) => tone(f, .22, { gain: .2, delay: i * .1 })); },
   end() { [784, 659, 523, 392].forEach((f, i) => tone(f, .45, { type: 'triangle', gain: .22, delay: i * .13 })); },
-  tap() { tone(700, .07, { type: 'triangle', gain: .18, to: 1100 }); }
+  tap() { tone(700, .07, { type: 'triangle', gain: .18, to: 1100 }); },
+  record() {
+    [523, 659, 784, 1046, 1318].forEach((f, i) =>
+      tone(f, .5, { type: 'triangle', gain: .22, delay: i * .09 }));
+    noise(.4, { freq: 5200, q: .6, gain: .18, sweep: .4 });
+  }
 };

@@ -40,6 +40,10 @@ export class Blades {
       for (const ev of (events.length ? events : [e])) {
         const p = this.toWorld(ev.clientX, ev.clientY);
         const last = s.pts[s.pts.length - 1];
+        if (!last) {                     // trail aged out under a resting finger
+          s.pts.push({ x: p.x, y: p.y, t });
+          continue;
+        }
         const d = Math.hypot(p.x - last.x, p.y - last.y);
         if (d < 0.05) continue;
         if (d >= MIN_SEG * 0.35) {
@@ -86,7 +90,9 @@ export class Blades {
   update() {
     const t = performance.now();
     for (const [id, s] of this.pointers) {
-      while (s.pts.length && t - s.pts[0].t > TRAIL_MS) s.pts.shift();
+      // a live finger always keeps its last point, so the next move has an anchor
+      const floor = s.dead ? 0 : 1;
+      while (s.pts.length > floor && t - s.pts[0].t > TRAIL_MS) s.pts.shift();
       if (s.dead && !s.pts.length) this.pointers.delete(id);
     }
   }

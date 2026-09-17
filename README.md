@@ -57,7 +57,8 @@ engine/
   input.js       multi-touch blades, trails, swipe segments
   particles.js   juice, sparks, smoke, confetti + the splatter layer
   audio.js       synthesised SFX (no audio files ship)
-  ui.js          screens, HUD, settings, persistence
+  ui.js          screens, HUD, settings, name entry, leaderboard
+  scores.js      the arcade record table, keyed by game id
   pwa.js         fullscreen, orientation, wake lock, gesture guards, SW
 games/fruit-slash/
   index.js       rules: physics, slicing, scoring, power-ups
@@ -167,7 +168,20 @@ Every sound is synthesised at runtime with the Web Audio API — filtered noise
 bursts for slices, a sawtooth thud for bombs, arpeggios for power-ups. No audio
 files, nothing to download, nothing to cache.
 
-### 2.9 Shipping
+### 2.9 Records
+
+Arcade rules: three characters, cycled with big up/down buttons (a physical
+keyboard works too). After every round the score is checked against that game's
+top ten; if it lands, the screen says **NEW RECORD!** or **TOP n!**, takes the
+name, and shows the board with the new row lit. The entry defaults to the last
+name used, so a repeat player just taps OK.
+
+`engine/scores.js` holds one store for the whole cabinet, keyed by game id, and
+the shell owns the entire flow — so a second minigame gets records, name entry
+and the record notice by calling `ui.end(result)` and nothing else. Settings
+live at `arcade/settings/<game>` under the same shape.
+
+### 2.10 Shipping
 
 `manifest.webmanifest` + a cache-first service worker precaching every file, so
 the game works with the tablet in aeroplane mode. Icons are generated from maths
@@ -196,17 +210,18 @@ menu → *Install app*. After the first load it runs offline.
 **When you change a file, bump `CACHE` in `sw.js`.** The worker is cache-first,
 so an unbumped version keeps serving the old build.
 
-## 4. Settings
+## 4. Settings and scores
 
-The gear on the start screen: round length (60/90/120 s), bombs on/off, sound
+The trophy on the start screen opens the top ten. The gear opens round length (60/90/120 s), bombs on/off, sound
 on/off, and speed (easy/normal/fast, which scales the tempo ramp). Choices and
 the high score persist in `localStorage`.
 
 ## 5. Adding a second game
 
-Implement `enter / step / draw / overlay` from `engine/scene.js`, then point
-`main.js` at it. The loop, units, blades, particles, audio, HUD, settings and
-PWA plumbing all come for free.
+Implement `enter / step / draw / overlay` from `engine/scene.js`, give it an id,
+then point `main.js` at it. The loop, unit system, blades, particles, audio,
+HUD, settings, theme, leaderboard and PWA plumbing all come for free, and the
+new game looks and behaves like this one because it is literally the same shell.
 
 ## 6. Development
 
