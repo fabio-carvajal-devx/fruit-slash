@@ -49,14 +49,19 @@ export class App {
     requestAnimationFrame(loop);
   }
 
-  setScene(scene, opts) {
-    this.scene?.leave();
+  /** Put a scene on screen without starting a round (menus, previews). */
+  attach(scene) {
+    if (this.scene && this.scene !== scene) this.scene.leave();
     this.scene = scene;
     scene.mount(this);
+  }
+
+  setScene(scene, opts) {
+    this.attach(scene);
     scene.enter(opts);
   }
 
-  play()  { this.paused = false; this.last = performance.now(); this.blades.enabled = true; }
+  play()  { this.paused = false; this.last = performance.now(); this.blades.enabled = this.scene?.wantsBlades !== false; }
   hold()  { this.paused = true; this.blades.enabled = false; }
 
   render(t) {
@@ -69,7 +74,7 @@ export class App {
     const ctx = this.view.begin(sx, sy);
     this.scene.draw(ctx, t);
     this.particles.draw(ctx);
-    this.blades.draw(ctx);
+    if (this.scene.wantsBlades !== false) this.blades.draw(ctx);
     this.scene.overlay(ctx, t);
   }
 }

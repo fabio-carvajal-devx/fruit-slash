@@ -7,6 +7,7 @@
   --shadow: 0 0.6vmin 2vmin rgba(0,0,0,.45);
   --glass: rgba(255,255,255,.14);
   --glass-line: rgba(255,255,255,.28);
+  --accent:#ff5c8a;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-l: env(safe-area-inset-left, 0px);
   --safe-r: env(safe-area-inset-right, 0px);
@@ -89,10 +90,10 @@ html,body{
 @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
 
 .logo{ font-size:13vmin; line-height:.92; font-weight:900; text-align:center; letter-spacing:-.01em; }
-.logo span{ display:block; font-size:.52em; letter-spacing:.34em; margin-left:.34em; color:#ffe45e; }
-.logo b{ display:block; background:linear-gradient(180deg,#fff,#ffb3c6 60%,#ff5c8a);
+.logo span{ display:block; font-size:.52em; letter-spacing:.34em; margin-left:.34em; color:var(--accent); }
+.logo b{ display:block; background:linear-gradient(180deg,#fff 10%,var(--accent));
   -webkit-background-clip:text; background-clip:text; color:transparent;
-  filter:drop-shadow(0 .8vmin 1.6vmin rgba(255,60,120,.45)); }
+  filter:drop-shadow(0 .8vmin 1.6vmin rgba(0,0,0,.5)); }
 
 h2{ font-size:8vmin; font-weight:900; letter-spacing:.08em; }
 .label{ font-size:3.4vmin; letter-spacing:.34em; opacity:.7; }
@@ -201,3 +202,31 @@ h2{ font-size:8vmin; font-weight:900; letter-spacing:.08em; }
 .slot b.roll{ animation:roll .18s ease; }
 @keyframes roll{ 0%{ transform:translateY(-22%); opacity:.2 } 100%{ transform:none; opacity:1 } }
 #nameTitle{ color:#ffe45e; text-shadow:0 0 4vmin rgba(255,210,70,.55); animation:breathe 1.6s ease-in-out infinite; }
+
+/* ---------- the cabinet: catalogue home ---------- */
+.cab{ font-size:9vmin; line-height:.95; font-weight:900; text-align:center; letter-spacing:-.01em; margin-bottom:1vmin; }
+.cab span{ display:block; font-size:.46em; letter-spacing:.42em; margin-left:.42em; color:#8fe4ff; }
+.cab b{ display:block; background:linear-gradient(180deg,#fff,#b9c6ff 55%,#7a6bff);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(0 .8vmin 1.6vmin rgba(110,90,255,.5)); }
+
+#catalog{ display:flex; gap:3vmin; flex-wrap:wrap; justify-content:center; align-items:stretch; }
+.card{
+  pointer-events:auto; cursor:pointer; border:0.45vmin solid var(--glass-line);
+  background:linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.05));
+  backdrop-filter:blur(1.2vmin);
+  color:var(--ink); border-radius:4vmin; padding:3vmin 3vmin 2.4vmin;
+  width:38vmin; display:flex; flex-direction:column; align-items:center; gap:1.2vmin;
+  box-shadow:var(--shadow); transition:transform .12s ease, border-color .2s ease;
+}
+.card:active{ transform:scale(.95); }
+.card svg{ width:20vmin; height:20vmin; filter:drop-shadow(0 1vmin 2vmin rgba(0,0,0,.45)); }
+.card .t{ font-size:4.4vmin; font-weight:900; letter-spacing:.06em; line-height:1; text-align:center; }
+.card .s{ font-size:2.4vmin; letter-spacing:.24em; opacity:.62; text-align:center; }
+.card .b{ font-size:2.6vmin; letter-spacing:.16em; margin-top:.6vmin; opacity:.9; }
+.card .b em{ font-style:normal; font-weight:900; font-size:1.3em; }
+.card.soon{ opacity:.45; }
+
+.corner-tl{ position:absolute; top:calc(3vmin + var(--safe-t)); left:calc(3vmin + var(--safe-l)); opacity:.6; }
+
+@media (orientation:portrait){ .card{ width:min(62vmin, 78vw) } #catalog{ gap:2.4vmin } }

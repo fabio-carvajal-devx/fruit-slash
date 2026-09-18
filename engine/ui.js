@@ -6,17 +6,17 @@
 import * as audio from './audio.js';
 import { sfx } from './audio.js';
 import { Scores } from './scores.js';
+import { music } from './music.js';
 
 const $ = id => document.getElementById(id);
-const DEFAULTS = { duration: 90, bombs: 1, sound: 1, speed: 1 };
+const DEFAULTS = { duration: 90, bombs: 1, sound: 1, music: 1, speed: 1 };
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
 export class UI {
-  constructor(gameId) {
-    this.game = gameId;
-    this.key = `arcade/settings/${gameId}`;   // per game, one store shape
-    this.save = this.load();
-    audio.setEnabled(!!this.save.sound);
+  constructor() {
+    this.game = null;
+    this.key = 'arcade/settings/_';
+    this.save = { ...DEFAULTS };
 
     this.el = {
       hud: $('hud'),
@@ -26,17 +26,52 @@ export class UI {
       bestStart: $('bestStart'), bestName: $('bestName'),
       endScore: $('endScore'), endStats: $('endStats'), endBoard: $('endBoard'),
       endRank: $('endRank'), stars: $('stars'),
-      scoreBoard: $('scoreBoard'), nameSlots: $('nameSlots'), nameTitle: $('nameTitle'),
+      scoreBoard: $('scoreBoard'), lifetime: $('lifetime'),
+      nameSlots: $('nameSlots'), nameTitle: $('nameTitle'),
       countNum: $('countNum'),
+      catalog: $('catalog'), kicker: $('gameKicker'), gameName: $('gameName'),
+      optRows: [...document.querySelectorAll('.opt[data-opt]')],
       tint: {
         freeze: $('tint-freeze'), double: $('tint-double'),
         frenzy: $('tint-frenzy'), bomb: $('tint-bomb')
       }
     };
 
+    this.repaint = [];
     this.buildNameEntry();
     this.bindSegments();
+  }
+
+  /** Point the whole shell at one game: title, accent, settings, records. */
+  setGame(meta) {
+    this.meta = meta;
+    this.game = meta.id;
+    this.key = `arcade/settings/${meta.id}`;   // per game, one store shape
+    this.save = this.load();
+    audio.setEnabled(!!this.save.sound);
+    music.setEnabled(!!this.save.music);
+    document.documentElement.style.setProperty('--accent', meta.accent);
+    this.el.kicker.textContent = meta.kicker;
+    this.el.gameName.textContent = meta.name;
+    this.el.optRows.forEach(r => { r.hidden = !meta.options.includes(r.dataset.opt); });
+    this.repaint.forEach(fn => fn());
     this.refreshBest();
+  }
+
+  renderCatalog(games, onPick) {
+    this.el.catalog.innerHTML = '';
+    for (const g of games) {
+      const best = Scores.best(g.id);
+      const card = document.createElement('button');
+      card.className = 'card';
+      card.style.setProperty('--accent', g.accent);
+      card.innerHTML = `${g.art}
+        <span class="t">${g.kicker} ${g.name}</span>
+        <span class="s">${g.tagline}</span>
+        <span class="b">${best ? `BEST <em>${best.score}</em> ${best.name}` : 'NOT PLAYED YET'}</span>`;
+      card.addEventListener('click', () => { sfx.tap(); onPick(g); });
+      this.el.catalog.appendChild(card);
+    }
   }
 
   /* ------------------------------ settings ------------------------------ */
@@ -47,7 +82,8 @@ export class UI {
   persist() { try { localStorage.setItem(this.key, JSON.stringify(this.save)); } catch {} }
 
   bindSegments() {
-    const map = { optTime: 'duration', optBombs: 'bombs', optSound: 'sound', optSpeed: 'speed' };
+    const map = { optTime: 'duration', optBombs: 'bombs', optSound: 'sound',
+                  optMusic: 'music', optSpeed: 'speed' };
     for (const [id, key] of Object.entries(map)) {
       const box = $(id);
       const paint = () => [...box.children].forEach(b =>
@@ -56,8 +92,10 @@ export class UI {
         const b = e.target.closest('button'); if (!b) return;
         this.save[key] = Number(b.dataset.v);
         if (key === 'sound') audio.setEnabled(!!this.save.sound);
+        if (key === 'music') music.setEnabled(!!this.save.music);
         this.persist(); paint(); sfx.tap();
       });
+      this.repaint.push(paint);
       paint();
     }
   }
@@ -134,7 +172,15 @@ export class UI {
     ).join('');
   }
 
-  showScores() { this.renderBoard(this.el.scoreBoard, Scores.top(this.game, 10)); this.show('s-scores'); }
+  showScores() {
+    this.renderBoard(this.el.scoreBoard, Scores.top(this.game, 10));
+    const s = Scores.stats(this.game);
+    const mins = Math.round(s.seconds / 60);
+    this.el.lifetime.textContent = s.plays
+      ? `${s.plays} GAMES · ${s.points} POINTS · ${mins} MIN PLAYED`
+      : 'NO GAMES YET';
+    this.show('s-scores');
+  }
 
   /** Arcade three-character entry. Resolves with the chosen name. */
   buildNameEntry() {
@@ -201,12 +247,10 @@ export class UI {
       s.classList.remove('lit');
       if (r.score >= tiers[i]) setTimeout(() => s.classList.add('lit'), 120 + i * 140);
     });
-    this.el.endStats.innerHTML = `
-      <li>FRUIT<b>${r.sliced}</b></li>
-      <li>EXTRA CHOPS<b>${r.chops || 0}</b></li>
-      <li>BEST COMBO<b>x${r.combo || 0}</b></li>
-      <li>BOMBS<b>${r.bombs}</b></li>`;
+    this.el.endStats.innerHTML = (r.stats || [])
+      .map(([label, value]) => `<li>${label}<b>${value}</b></li>`).join('');
 
+    Scores.logPlay(this.game, r.score, r.duration);
     const rank = Scores.rank(this.game, r.score);
     this.el.endRank.hidden = true;
     this.renderBoard(this.el.endBoard, Scores.top(this.game, 5));

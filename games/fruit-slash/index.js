@@ -17,7 +17,9 @@ const MAX_CUT      = 2;      // fruit -> halves -> chunks
 const RECUT_DELAY  = 0.10;   // stops one stroke shredding its own debris
 const LANES        = 5;
 
-export class FruitSlash extends Scene {
+export const meta = { id: 'fruit-slash', title: 'Fruit Slash' };
+
+export default class FruitSlash extends Scene {
   constructor(hooks) {
     super();
     this.hooks = hooks;
@@ -25,6 +27,7 @@ export class FruitSlash extends Scene {
     this.entities = [];
     this.pops = [];
     this.state = 'idle';
+    this.wantsBlades = true;
     this.opts = { duration: 90, bombs: true, speed: 1 };
     this.director = new Director(this, this.opts);
   }
@@ -119,7 +122,9 @@ export class FruitSlash extends Scene {
         if (sec <= 5 && sec > 0) sfx.tick();
       }
       if (this.timeLeft <= 0) return this.finish();
-      this.director.update(wdt, 1 - clamp(this.timeLeft / this.opts.duration, 0, 1));
+      const progress = 1 - clamp(this.timeLeft / this.opts.duration, 0, 1);
+      this.director.update(wdt, progress);
+      this.hooks.intensity?.(this.director.intensity(progress));
     }
 
     this.slice();
@@ -279,8 +284,9 @@ export class FruitSlash extends Scene {
     setTimeout(() => {
       this.state = 'idle';
       this.hooks.end({
-        score: this.score, sliced: this.sliced, chops: this.chops,
-        combo: this.bestCombo, bombs: this.bombsHit, duration: this.opts.duration
+        score: this.score, duration: this.opts.duration,
+        stats: [['FRUIT', this.sliced], ['EXTRA CHOPS', this.chops],
+                ['BEST COMBO', 'x' + this.bestCombo], ['BOMBS', this.bombsHit]]
       });
     }, 1300);
   }

@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Fruit Slash</title>
+<title>The Arcade</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -39,8 +39,16 @@
   <!-- SCREENS -->
   <div id="screens">
 
-    <section id="s-start" class="screen show">
-      <h1 class="logo"><span>FRUIT</span><b>SLASH</b></h1>
+    <section id="s-home" class="screen show">
+      <h1 class="cab"><span>THE</span><b>ARCADE</b></h1>
+      <div id="catalog"></div>
+    </section>
+
+    <section id="s-start" class="screen">
+      <button id="backBtn" class="glass-btn round tiny corner-tl" aria-label="Back">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5L8 12l6.5 6.5 1.8-1.8L11.6 12l4.7-4.7z"/></svg>
+      </button>
+      <h1 class="logo"><span id="gameKicker">FRUIT</span><b id="gameName">SLASH</b></h1>
       <button id="playBtn" class="mega">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.2v13.6L19 12z"/></svg>
         <span>PLAY</span>
@@ -84,25 +92,31 @@
 
     <section id="s-settings" class="screen">
       <h2>SETTINGS</h2>
-      <div class="opt">
+      <div class="opt" data-opt="duration">
         <span class="opt-label">ROUND</span>
         <div class="seg" id="optTime">
-          <button data-v="60">60s</button><button data-v="90">90s</button><button data-v="120">120s</button>
+          <button data-v="60">60s</button><button data-v="90">90s</button><button data-v="120">2m</button><button data-v="180">3m</button>
         </div>
       </div>
-      <div class="opt">
+      <div class="opt" data-opt="bombs">
         <span class="opt-label">BOMBS</span>
         <div class="seg" id="optBombs">
           <button data-v="0">OFF</button><button data-v="1">ON</button>
         </div>
       </div>
-      <div class="opt">
+      <div class="opt" data-opt="sound">
         <span class="opt-label">SOUND</span>
         <div class="seg" id="optSound">
           <button data-v="0">OFF</button><button data-v="1">ON</button>
         </div>
       </div>
-      <div class="opt">
+      <div class="opt" data-opt="music">
+        <span class="opt-label">MUSIC</span>
+        <div class="seg" id="optMusic">
+          <button data-v="0">OFF</button><button data-v="1">ON</button>
+        </div>
+      </div>
+      <div class="opt" data-opt="speed">
         <span class="opt-label">SPEED</span>
         <div class="seg" id="optSpeed">
           <button data-v="0">EASY</button><button data-v="1">NORMAL</button><button data-v="2">FAST</button>
@@ -121,6 +135,7 @@
     <section id="s-scores" class="screen">
       <h2>HIGH SCORES</h2>
       <ol id="scoreBoard" class="board big"></ol>
+      <p class="label" id="lifetime"></p>
       <button id="closeScores" class="pill">DONE</button>
     </section>
 

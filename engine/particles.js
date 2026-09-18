@@ -51,6 +51,33 @@ export class Particles {
     }
   }
 
+  /** Expanding shockwave ring — the thing that sells an explosion. */
+  shock(x, y, color, size = 14, life = .42) {
+    this.spawn({ k: 'ring', x, y, vx: 0, vy: 0, r: size, r0: size * .12,
+                 life, age: 0, color, grav: 0 });
+  }
+
+  /** Hot shards thrown out of a wreck. */
+  debris(x, y, color, n = 10, power = 40) {
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, TAU), s = rand(.35, 1) * power;
+      this.spawn({
+        k: 'shard', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        r: rand(.4, 1.1), rot: rand(0, TAU), vr: rand(-14, 14),
+        life: rand(.4, .9), age: 0, color, grav: 0
+      });
+    }
+  }
+
+  /** One call for a full explosion: flash, ring, shards, smoke, sparks. */
+  explode(x, y, color = '#ffd166', scale = 1) {
+    this.shock(x, y, '#ffffff', 9 * scale, .26);
+    this.shock(x, y, color, 16 * scale, .5);
+    this.debris(x, y, color, Math.round(9 * scale), 38 * scale);
+    this.sparkle(x, y, '#fff3c4', Math.round(14 * scale), 52 * scale);
+    this.smoke(x, y, Math.round(8 * scale));
+  }
+
   update(dt) {
     const l = this.list;
     for (let i = l.length - 1; i >= 0; i--) {
@@ -59,8 +86,9 @@ export class Particles {
       if (p.age >= p.life) { l.splice(i, 1); continue; }
       p.vy += p.grav * dt;
       p.x += p.vx * dt; p.y += p.vy * dt;
-      if (p.k === 'confetti') p.rot += p.vr * dt;
+      if (p.k === 'confetti' || p.k === 'shard') p.rot += p.vr * dt;
       if (p.k === 'smoke') p.r += dt * 3;
+      if (p.k === 'shard') { p.vx *= 1 - dt * 2.2; p.vy *= 1 - dt * 2.2; }
     }
   }
 
@@ -69,7 +97,21 @@ export class Particles {
       const t = p.age / p.life;
       ctx.globalAlpha = p.k === 'smoke' ? (1 - t) * .35 : 1 - t * t;
       ctx.fillStyle = p.color;
-      if (p.k === 'confetti') {
+      if (p.k === 'ring') {
+        const e = 1 - Math.pow(1 - t, 3);
+        ctx.globalAlpha = (1 - t) * (1 - t);
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = Math.max(.12, p.r * .10 * (1 - t));
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r0 + (p.r - p.r0) * e, 0, TAU);
+        ctx.stroke();
+      } else if (p.k === 'shard') {
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.beginPath();
+        ctx.moveTo(-p.r, -p.r * .5); ctx.lineTo(p.r, -p.r * .2);
+        ctx.lineTo(p.r * .4, p.r * .6); ctx.closePath();
+        ctx.fill(); ctx.restore();
+      } else if (p.k === 'confetti') {
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
         ctx.fillRect(-p.r, -p.r * .45, p.r * 2, p.r * .9);
         ctx.restore();

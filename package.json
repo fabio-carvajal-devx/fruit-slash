@@ -1,11 +1,11 @@
 {
-  "name": "fruit-slash",
+  "name": "the-arcade",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "A kid-friendly fruit-slicing PWA. No build step, no dependencies.",
+  "description": "A kid-friendly browser arcade. No build step, no dependencies.",
   "scripts": {
-    "start": "python3 -m http.server 8080",
+    "start": "python3 tools/serve.py 8080",
     "icons": "python3 tools/make-icons.py"
   }
 }

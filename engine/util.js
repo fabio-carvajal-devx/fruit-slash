@@ -27,6 +27,14 @@ export function weighted(table) {
 
 export const now = () => performance.now();
 
+/* Chrome rejects vibrate() before the first tap and logs an error each time,
+   which floods the console and buries real ones. Arm on the first gesture. */
+let hapticsArmed = false;
+if (typeof addEventListener === 'function') {
+  addEventListener('pointerdown', () => { hapticsArmed = true; }, { once: true, capture: true });
+}
+
 export function vibrate(pattern) {
-  if (navigator.vibrate) { try { navigator.vibrate(pattern); } catch (_) {} }
+  if (!hapticsArmed || !navigator.vibrate) return;
+  try { navigator.vibrate(pattern); } catch (_) {}
 }

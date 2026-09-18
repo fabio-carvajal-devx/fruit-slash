@@ -10,6 +10,7 @@
    of lucky rolls turns an easy round into chaos.
    -------------------------------------------------------------- */
 import { rand, randInt, chance, weighted } from '../../engine/util.js';
+import { Rhythm } from '../../engine/rhythm.js';
 import { FRUITS } from './fruits.js';
 
 const FRUIT_TABLE = FRUITS.map(f => [f, f.weight]);
@@ -30,13 +31,12 @@ export class Director {
   constructor(world, opts) {
     this.world = world;
     this.opts = opts;               // { bombs, speed, duration }
+    this.rhythm = new Rhythm({ bpm0: 80, bpm1: 136, steps: BEATS });
     this.reset();
   }
 
   reset() {
-    this.beat = 0;
-    this.bar = 0;
-    this.clock = 0.6;               // lead-in before the first beat
+    this.rhythm.reset();
     this.bombGrace = 6;
     this.frenzy = 0;
     this.carry = 0;                 // throws pushed to the next beat
@@ -46,28 +46,19 @@ export class Director {
 
   setFrenzy(sec) { this.frenzy = sec; }
 
-  bpm(intensity) {
-    const mul = [0.80, 1.0, 1.18][this.opts.speed];     // easy / normal / fast
-    const base = 80 + intensity * 56;
-    return base * mul * (this.frenzy > 0 ? 1.5 : 1);
-  }
+  /** 0..1, and never dead-slow at the start */
+  intensity(progress) { return 0.15 + 0.85 * Math.pow(progress, 0.85); }
 
   update(dt, progress) {
     this.bombGrace -= dt;
     this.frenzy = Math.max(0, this.frenzy - dt);
-    this.clock -= dt;
-
-    const intensity = 0.15 + 0.85 * Math.pow(progress, 0.85);   // never dead-slow at the start
-    if (this.clock > 0) return;
-    this.clock += 60 / this.bpm(intensity);              // one grid slot = one beat
-
-    this.onBeat(intensity);
-    this.beat++;
-    if (this.beat >= BEATS) {
-      this.beat = 0; this.bar++;
-      this.bombThisBar = false;
-      this.barsSincePower++;
-    }
+    this.rhythm.speed = this.opts.speed;
+    this.rhythm.tempoMul = this.frenzy > 0 ? 1.5 : 1;
+    this.rhythm.update(dt, this.intensity(progress), (beat, bar, intensity) => {
+      if (beat === 0 && bar > 0) { this.bombThisBar = false; this.barsSincePower++; }
+      this.beat = beat;
+      this.onBeat(intensity);
+    });
   }
 
   onBeat(intensity) {

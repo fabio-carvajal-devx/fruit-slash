@@ -1,28 +1,39 @@
 /* Procedural sound. No audio files ship with the game — everything
    below is synthesised, which keeps the install tiny and offline-safe. */
 
-let ctx = null, master = null, noiseBuf = null;
+let ctx = null, master = null, sfxBus = null, noiseBuf = null;
 let enabled = true;
 
+/** Effects only. Music has its own bus so the two toggle independently. */
 export function setEnabled(v) {
   enabled = v;
-  if (master) master.gain.value = v ? 0.9 : 0;
+  if (sfxBus) sfxBus.gain.value = v ? 1 : 0;
 }
 
+/** Music and any other voice shares this one context and master bus. */
+export function bus() { return ctx ? { ctx, master } : null; }
+
 export function unlock() {
-  if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+  if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return ctx; }
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return;
   ctx = new AC();
   master = ctx.createGain();
-  master.gain.value = enabled ? 0.9 : 0;
+  master.gain.value = 0.9;
   master.connect(ctx.destination);
+
+  sfxBus = ctx.createGain();
+  sfxBus.gain.value = enabled ? 1 : 0;
+  sfxBus.connect(master);
 
   const len = ctx.sampleRate * 0.6;
   noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
   const d = noiseBuf.getChannelData(0);
   for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return ctx;
 }
+
+export function noiseBuffer() { return noiseBuf; }
 
 const t0 = () => ctx.currentTime;
 
@@ -35,7 +46,7 @@ function noise(dur, { type = 'bandpass', freq = 1200, q = 1, gain = .5, sweep = 
   const g = ctx.createGain();
   g.gain.setValueAtTime(gain, t0());
   g.gain.exponentialRampToValueAtTime(0.0001, t0() + dur);
-  src.connect(f); f.connect(g); g.connect(master);
+  src.connect(f); f.connect(g); g.connect(sfxBus);
   src.start(); src.stop(t0() + dur + .02);
 }
 
@@ -49,7 +60,7 @@ function tone(freq, dur, { type = 'sine', gain = .3, to = null, delay = 0 } = {}
   g.gain.setValueAtTime(0.0001, s);
   g.gain.exponentialRampToValueAtTime(gain, s + 0.012);
   g.gain.exponentialRampToValueAtTime(0.0001, s + dur);
-  o.connect(g); g.connect(master);
+  o.connect(g); g.connect(sfxBus);
   o.start(s); o.stop(s + dur + .02);
 }
 
@@ -78,6 +89,17 @@ export const sfx = {
   go() { [523, 659, 880].forEach((f, i) => tone(f, .22, { gain: .2, delay: i * .1 })); },
   end() { [784, 659, 523, 392].forEach((f, i) => tone(f, .45, { type: 'triangle', gain: .22, delay: i * .13 })); },
   tap() { tone(700, .07, { type: 'triangle', gain: .18, to: 1100 }); },
+  laser() {
+    tone(1250, .09, { type: 'square', gain: .10, to: 420 });
+    noise(.06, { freq: 3200, q: 1.2, gain: .10, sweep: .4 });
+  },
+  boom() {
+    noise(.34, { type: 'lowpass', freq: 1500, gain: .55, sweep: .15 });
+    tone(150, .3, { type: 'sawtooth', gain: .18, to: 50 });
+  },
+  alarm() {
+    [0, .16, .32].forEach(d => tone(320, .14, { type: 'square', gain: .16, to: 620, delay: d }));
+  },
   record() {
     [523, 659, 784, 1046, 1318].forEach((f, i) =>
       tone(f, .5, { type: 'triangle', gain: .22, delay: i * .09 }));

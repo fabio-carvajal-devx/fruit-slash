@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Generate the PWA icons from pure maths - no image library, no assets.
 
-Draws a watermelon half with a blade streak, full-bleed so the same file
-works as a normal icon and as an Android maskable icon (all the important
-shapes sit inside the central 80% safe zone).
+Draws the cabinet's synthwave horizon, full-bleed so the same file works as a
+normal icon and as an Android maskable icon (the sun and grid stay inside the
+central safe zone that Android may crop to).
 
     python3 tools/make-icons.py
 """
@@ -22,54 +22,61 @@ def over(dst, src, alpha):
     return tuple(dst[i] + (src[i] - dst[i]) * alpha for i in range(3))
 
 
-RIND_OUT = (20, 83, 45)
-RIND_IN = (63, 163, 77)
-PITH = (247, 246, 216)
-FLESH_C = (255, 143, 163)
-FLESH_E = (217, 43, 71)
-SEED = (42, 26, 12)
-BG_C = (58, 31, 122)
-BG_E = (16, 10, 42)
+SKY_TOP = (18, 10, 53)
+SKY_MID = (59, 26, 99)
+SKY_LOW = (122, 43, 109)
+GROUND = (10, 8, 30)
+GRID = (120, 235, 255)
+SUN_TOP = (255, 228, 94)
+SUN_MID = (255, 138, 92)
+SUN_BOT = (255, 46, 138)
 
-THETA = math.radians(-22)
-CT, ST = math.cos(THETA), math.sin(THETA)
-CX, CY = 0.0, 0.06
-R = 0.60
-SEEDS = [(-0.30, 0.22), (-0.06, 0.34), (0.22, 0.24), (0.36, 0.10), (-0.42, 0.08), (0.06, 0.13)]
+HORIZON = 0.10          # y of the horizon in [-1,1] space
+SUN_R = 0.58
+STARS = [(-0.72, -0.66), (-0.38, -0.82), (0.12, -0.74), (0.62, -0.88),
+         (0.84, -0.44), (-0.86, -0.28), (0.38, -0.92), (-0.12, -0.52)]
 
 
 def sample(x, y):
-    """x,y in [-1,1]. Returns an RGB tuple."""
-    d = math.hypot(x, y)
-    col = mix(BG_C, BG_E, d / 1.35)
+    """x,y in [-1,1], y up-negative. Returns an RGB tuple."""
+    if y < HORIZON:
+        k = (y + 1) / (HORIZON + 1)
+        col = mix(SKY_TOP, SKY_MID, k) if k < 0.7 else mix(SKY_MID, SKY_LOW, (k - 0.7) / 0.3)
 
-    # fruit, in its own rotated frame
-    u = (x - CX) * CT + (y - CY) * ST
-    v = -(x - CX) * ST + (y - CY) * CT
-    r = math.hypot(u, v)
-    if v >= 0 and r <= R:
-        k = r / R
-        if k > 0.88:
-            col = mix(RIND_IN, RIND_OUT, (k - 0.88) / 0.12)
-        elif k > 0.80:
-            col = PITH
-        else:
-            col = mix(FLESH_C, FLESH_E, k / 0.80)
-            for sx, sy in SEEDS:
-                if math.hypot((u - sx) / 0.055, (v - sy) / 0.075) < 1.0:
-                    col = SEED
-        # soft top lighting on the rind side
-        col = over(col, (255, 255, 255), max(0.0, 0.18 * (1 - k) * (1 - v / R)))
+        for sx, sy in STARS:                      # stars sit behind the sun
+            if math.hypot(x - sx, y - sy) < 0.022:
+                col = over(col, (255, 255, 255), 0.85)
 
-    # blade streak
-    bx, by = 0.86, -0.50
-    t = (x * bx + y * by) / (bx * bx + by * by)
-    t = max(-1.0, min(1.0, t))
-    dist = math.hypot(x - bx * t, y - by * t)
-    w = 0.035 * (1.0 - abs(t) * 0.55)
-    if dist < w * 3:
-        a = max(0.0, 1 - dist / (w * 3)) ** 2 * 0.85
-        col = over(col, (255, 255, 255), a)
+        d = math.hypot(x, (y - HORIZON + SUN_R * 0.62))
+        if d < SUN_R:
+            t = (y - (HORIZON - SUN_R * 1.24)) / (SUN_R * 1.24)
+            t = max(0.0, min(1.0, t))
+            sun = mix(SUN_TOP, SUN_MID, t / 0.5) if t < 0.5 else mix(SUN_MID, SUN_BOT, (t - 0.5) / 0.5)
+            # the classic scanline gaps, widening toward the bottom
+            band = (y - (HORIZON - SUN_R * 1.24)) / (SUN_R * 0.19)
+            frac = band - math.floor(band)
+            if t > 0.32 and frac < 0.10 + t * 0.22:
+                sun = mix(sun, SKY_LOW, 0.85)
+            col = sun
+        elif d < SUN_R * 1.5:                     # glow
+            col = over(col, SUN_BOT, (1 - (d - SUN_R) / (SUN_R * 0.5)) * 0.28)
+        return col
+
+    # ground: a perspective grid receding to the horizon
+    col = GROUND
+    depth = (y - HORIZON) / (1 - HORIZON)
+    depth = max(1e-4, depth)
+    col = over(col, (60, 20, 90), 0.35 * (1 - depth))
+
+    persp = 1.0 / depth
+    line_w = 0.012 * persp
+    u = x * persp
+    if abs(u - round(u / 0.55) * 0.55) < line_w:
+        col = over(col, GRID, min(0.95, 0.35 + depth))
+
+    rows = math.sqrt(depth) * 7.0
+    if rows - math.floor(rows) < 0.10:
+        col = over(col, GRID, min(0.9, 0.25 + depth))
     return col
 
 

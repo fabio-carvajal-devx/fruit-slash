@@ -49,6 +49,20 @@ export const Scores = {
 
   lastName() { return read().lastName || 'AAA'; },
 
+  /** Lifetime totals per game, kept whether or not the score made the board. */
+  logPlay(game, score, duration) {
+    const db = read();
+    db.stats = db.stats || {};
+    const s = db.stats[game] = db.stats[game] || { plays: 0, points: 0, seconds: 0 };
+    s.plays++;
+    s.points += Math.max(0, score | 0);
+    s.seconds += Math.round(duration || 0);
+    write(db);
+    return s;
+  },
+
+  stats(game) { return read().stats?.[game] || { plays: 0, points: 0, seconds: 0 }; },
+
   clear(game) {
     const db = read();
     if (db.games) delete db.games[game];

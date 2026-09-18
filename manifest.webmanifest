@@ -1,19 +1,40 @@
 {
-  "name": "Fruit Slash",
-  "short_name": "Fruit Slash",
-  "description": "Slice the fruit, dodge the bombs. A two-minute game for kids.",
-  "id": "/fruit-slash/",
+  "name": "The Arcade",
+  "short_name": "Arcade",
+  "description": "A tiny arcade cabinet for kids: slice the fruit, fly the rocket. Two-minute games, offline.",
+  "id": "/the-arcade/",
   "start_url": ".",
   "scope": ".",
   "display": "fullscreen",
-  "display_override": ["fullscreen", "standalone"],
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
   "orientation": "landscape",
   "background_color": "#0b1020",
   "theme_color": "#0b1020",
-  "categories": ["games", "kids"],
+  "categories": [
+    "games",
+    "kids"
+  ],
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

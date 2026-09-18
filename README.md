@@ -1,210 +1,195 @@
-# Fruit Slash
+# The Arcade
 
 **Play: https://fabio-carvajal-devx.github.io/fruit-slash/**
 
-A one-button, two-minute fruit-slicing game for kids. Plain HTML + ES modules,
-no build step, no dependencies, installable as a PWA on an Android tablet.
+A tiny arcade cabinet for kids. Two games so far, one button to start each,
+pause top-left, a round is over in one to three minutes. Plain HTML and ES
+modules — no build step, no dependencies, installable as a PWA and playable
+with the tablet in aeroplane mode.
 
 ```bash
-python3 -m http.server 8080      # then open http://localhost:8080
+python3 tools/serve.py 8080      # then open http://localhost:8080
 ```
 
 ---
 
-## 1. What the original does, and what we kept
+## 1. The games
 
-Fruit Ninja's classic Arcade mode is 60 seconds of fruit lobbed from below on
-parabolic arcs. A swipe is a line segment; anything it crosses splits along the
-swipe angle into two halves that inherit the parent's velocity plus a
-perpendicular kick. Three fruit in one swipe is a combo. Bombs end the run.
-Three special bananas — freeze, frenzy, double — reshape the next few seconds.
+### Fruit Slash — swipe to slice
 
-The load-bearing details, the ones that make it feel good rather than merely work:
+Fruit is lobbed from below on parabolic arcs; a swipe is a line segment, and
+anything it crosses splits along the swipe angle. Three in one window is a
+combo. Bombs cost 20 points and shake the screen — they do not end the run.
 
-| Detail | Why it matters |
-| --- | --- |
-| Fruit apex lands at 60–90% of screen height | every throw is reachable without the player lunging |
-| The cut runs along the *swipe* angle, not the fruit's | the player feels they aimed the knife |
-| Halves separate perpendicular to the cut | reads as "it came apart", not "it despawned" |
-| A minimum swipe speed is required | a resting finger cannot farm points |
-| Juice stains the screen and fades | the last few seconds are visible as a mess you made |
+Cut fruit can be cut again: halves split into chunks, chunks burst. Every
+re-cut scores and feeds the combo window, so chasing the debris of a big
+watermelon is worth doing.
 
-### What changed for a five-year-old
+Power-ups: **Freeze** (world at 34% for 5.5s, the clock keeps real time),
+**Frenzy** (6s of dense throws, no bombs), **×2** (8s), **+10s**.
 
-- **Bombs cost 20 points, they do not end the run.** A kid who loses at second 12
-  does not get a second turn; they get up and leave. There is no lose condition
-  at all — only the clock.
-- **Missing a fruit costs nothing.** Classic mode's three-strikes rule punishes
-  the exact thing a small child is worst at.
-- **Everything is bigger and slower.** Fruit radius is ~8% of the short screen
-  edge and flight time is about two seconds.
-- **One button.** Play. Pause is top-left, where a right-handed grip on a tablet
-  does not reach it by accident.
-- **Stars, not rank.** The end screen awards 1–3 stars against a score-per-minute
-  threshold, so the target scales with the round length.
+### Asteroid Run — tilt to fly
+
+Lean the tablet to steer the rocket, tap to fire. Collect energy cells, shoot
+rocks apart, kill saucers, and every three minutes a mothership shows up.
+
+- **Steering** reads device orientation, mapped through the current screen
+  angle so "lean left" means left however the tablet is held, and calibrated
+  to whatever angle the player is already holding it at. Dragging a finger
+  works too, for desks and anything without a gyroscope.
+- **Weapons** are pickups like any other item, held for 14 seconds:
+  **Bolt** (default), **Twin**, **Spread**, **Beam** (pierces everything).
+  Taking a hit knocks the gun back to Bolt.
+- **The boss** sweeps overhead, fires slow readable spreads and drops rocks.
+  It has a health bar, its own heavier music, and a 200-point bounty.
+
+Power-ups: **Shield** (absorbs one hit), **Slow-mo**, **×2**, **+10s**.
+
+Neither game has a lose condition. Only the clock ends a round.
 
 ---
 
 ## 2. Areas
 
-The build is split so each area can be re-tuned without touching the others.
-`engine/` is game-agnostic and is meant to carry a second and third game;
-`games/fruit-slash/` is everything specific to this one.
+`engine/` is game-agnostic and carries both games; `games/<id>/` is everything
+specific to one.
 
 ```
 engine/
   view.js        canvas, DPR, and the unit system
   app.js         fixed-timestep loop, screen shake, scene host
-  scene.js       the four-method contract a game implements
+  scene.js       the contract a game implements
+  rhythm.js      the beat grid every game paces itself from
   input.js       multi-touch blades, trails, swipe segments
-  particles.js   juice, sparks, smoke, confetti + the splatter layer
-  audio.js       synthesised SFX (no audio files ship)
+  particles.js   juice, sparks, smoke, shockwaves, debris, confetti
+  audio.js       synthesised sound effects
+  music.js       the procedural soundtrack
   ui.js          screens, HUD, settings, name entry, leaderboard
-  scores.js      the arcade record table, keyed by game id
-  pwa.js         fullscreen, orientation, wake lock, gesture guards, SW
-games/fruit-slash/
-  index.js       rules: physics, slicing, scoring, power-ups
-  fruits.js      vector fruit definitions and their renderers
-  director.js    what gets thrown, and when
-  background.js  the parallax night garden
-main.js          wires one game to the shell
+  scores.js      records and lifetime stats, keyed by game id
+  menu-scene.js  the catalogue's synthwave backdrop
+  pwa.js         fullscreen, orientation, wake lock, gestures, SW
+games/
+  registry.js    the catalogue: one entry per game
+  fruit-slash/   fruits.js, director.js, background.js, index.js
+  asteroid-run/  art.js, weapons.js, background.js, index.js
+main.js          routes between the catalogue and a game
 ```
 
 ### 2.1 No pixels anywhere
 
 The short edge of the screen is **always exactly 100 units**, on every device.
 `View` computes `u = min(width, height) / 100` and sets the canvas transform to
-`dpr * u`, so the game is authored in units and the backing store is sized for
-the real device pixel ratio (capped at 2.5). A fruit of radius 8 is 8% of the
-short edge on a phone, a tablet and a 4K monitor.
+`dpr * u`, so games are authored in units and the backing store is sized for
+the real device pixel ratio (capped at 2.5). The CSS follows the same rule:
+every size is `vmin`, `em` or `%`.
 
-The CSS follows the same rule: every size is `vmin`, `em` or `%`. The string
-`px` appears nowhere in the layout.
-
-Nothing is a bitmap. Fruit, bombs, power-ups, the blade, the moon, the hills and
-the icons are all canvas paths and gradients, so there is no resolution to
-outgrow and the whole game is about 90 KB.
+Nothing is a bitmap. Fruit, rockets, rocks, saucers, the blade, the moon, the
+grid and the icons are canvas paths and gradients. The whole cabinet is under
+a megabyte.
 
 ### 2.2 Motion
 
-A fixed 120 Hz simulation step with an accumulator, decoupled from the render
-frame. Physics is identical on a 60 Hz tablet and a 120 Hz one; only the number
-of frames drawn changes. Returning from a background tab clamps `dt` to 0.25 s
-so nothing teleports.
-
-Gravity is 132 units/s². A throw picks its apex first (62–92% of screen height)
-and solves for the launch velocity, which is why no fruit ever sails off the top.
+A fixed 120 Hz simulation with an accumulator, decoupled from the render frame,
+so physics is identical on a 60 Hz tablet and a 120 Hz one. Returning from a
+background tab clamps `dt` so nothing teleports.
 
 ### 2.3 Gestures
 
 Pointer Events throughout, so finger, stylus and mouse are one code path.
 
-- **Every finger is its own blade.** Kids use two hands.
-- **Coalesced events are read** (`getCoalescedEvents`), so a fast swipe on a
-  120 Hz digitiser produces every intermediate segment instead of one long chord.
-- **Long jumps are subdivided** at 3.5 units, so a flick curves instead of
-  snapping to a straight bar.
-- Slicing tests each *segment* against each fruit, not each frame's endpoint, so
-  a fast swipe cannot tunnel through a fruit.
-- Hit padding is generous on fruit (×1.05) and tight on bombs (×0.82): easy to
-  hit what you want, harder to hit what you don't.
-- The trail is drawn as per-segment quads with round joins, so a folded-back
-  swipe cannot punch a hole through the ribbon.
-- `touch-action: none`, `overscroll-behavior: none`, and preventDefault on
+- Every finger is its own blade — kids use two hands.
+- Coalesced events are read, so a fast swipe on a 120 Hz digitiser produces
+  every intermediate segment instead of one long chord, and long jumps are
+  subdivided so a flick curves instead of snapping to a bar.
+- Slicing tests each *segment* against each fruit, so a fast swipe cannot
+  tunnel through one.
+- Hit padding is generous on fruit and tight on bombs: easy to hit what you
+  want, harder to hit what you don't.
+- Asteroid Run tracks exactly one pointer id for steering, so a stray or stuck
+  pointer cannot take the controls.
+- `touch-action: none`, `overscroll-behavior: none` and preventDefault on
   `touchmove` / `gesturestart` / `dblclick`, so a swipe is never a scroll, a
   zoom or a back-navigation.
-- Haptics on every slice, combo and bomb.
+- Haptics on slices, combos, hits and pickups, armed after the first tap.
 
-### 2.4 Multi-slice
+### 2.4 Pace and rhythm
 
-A fruit can be cut more than once. The first cut makes two halves; each half is
-still a target and splits again into two smaller chunks; a chunk bursts into
-juice. Re-cuts score 5 and count toward the combo window, so chasing the debris
-of a big watermelon is worth doing. A 0.1 s re-cut delay stops a single stroke
-shredding its own output in one frame.
+Random spawn timers give inconsistent difficulty: an unlucky run of rolls turns
+an easy round into chaos. So timing is not random. `engine/rhythm.js` runs a
+beat grid whose tempo ramps across the round; each game reacts on the beat.
+Randomness decides *what* arrives and *where*, never *when*.
 
-### 2.5 Pace and rhythm
+A density governor then caps what can be in the air at once — 3 rising to 6 in
+both games. That, not the patterns, is the real difficulty dial: the patterns
+ask for more than the cap allows, and the cap decides what a player at this
+point in the round can be asked to handle.
 
-Random spawn timers produce inconsistent difficulty: an unlucky run of rolls
-turns an easy round into chaos. So timing is not random.
+The same intensity curve drives the music, so the soundtrack tightens as the
+round does.
 
-- **A beat grid.** Tempo ramps from 80 to 136 BPM across the round, and every
-  bar of eight beats follows a rhythm pattern chosen by intensity tier. Strong
-  beats (0 and 4) always throw.
-- **Randomness lives in what, not when** — which fruit, which of five lanes,
-  which arc. Two rounds at the same setting feel identical in pace and never
-  identical in content.
-- **Syncopation.** One throw in five is nudged to the following beat so the grid
-  never sounds mechanical.
-- **A density governor** caps how much can be in the air at once (3 rising to 6,
-  12 in frenzy) and forces a throw whenever the screen is empty. This is the
-  actual difficulty dial: the patterns ask for more than the cap allows, and the
-  cap decides what a player at this point in the round can be asked to handle.
-- Bombs land only on off-beats 3 and 7, at most one per bar, never in the first
-  six seconds and never during frenzy.
-- Power-ups arrive on a downbeat every three bars, so they land *on* the pulse.
+### 2.5 Music
 
-### 2.6 Power-ups
+`engine/music.js` synthesises a synthwave soundtrack at run time from a pattern
+table — nothing is sampled or downloaded, so it costs zero bytes and works
+offline. Four-on-the-floor kick, sixteenth bass, detuned saw arps over a minor
+progression, with a delay locked to a straight eighth.
 
-| | Effect |
+It is **layered by intensity** rather than fixed. A round opens with pad and a
+half-time kick; bass, hats, clap, the sixteenth arp and a lead each arrive at
+their own threshold as the game speeds up. The boss has its own heavier track.
+
+If a tab is throttled the scheduler is starved; rather than dumping the backlog
+in a heap it resyncs to the next downbeat. A track may instead name an audio
+`file`, which is streamed and looped — the hook for a licensed recording.
+
+### 2.6 Records and storage
+
+Everything persists in `localStorage`, under one namespace:
+
+| Key | Holds |
 | --- | --- |
-| ❄️ Freeze | world runs at 34% for 5.5 s — the clock does not slow |
-| ⭐ Frenzy | 6 s of dense throws, bombs suppressed |
-| ✕2 Double | 8 s of doubled points, including combo bonuses |
-| ⏱ +10s | ten seconds back on the clock |
+| `arcade/v1` | top-ten records per game, last name used, lifetime stats |
+| `arcade/settings/<game>` | round length, bombs, sound, music, speed |
 
-Each has its own screen tint, its own arpeggio and its own banner.
-
-### 2.7 Background
-
-Five parallax planes: a cached sky gradient with moon, halo and stars; three
-procedurally generated ridge silhouettes; drifting lanterns; falling petals; and
-foreground foliage framing the bottom corners. Each plane pans at its own rate
-from a slow sine drift plus device tilt (`deviceorientation`, smoothed, ignored
-where unavailable). A 20% scrim sits between the scenery and the gameplay so
-fruit always reads louder than the background.
-
-### 2.8 Audio
-
-Every sound is synthesised at runtime with the Web Audio API — filtered noise
-bursts for slices, a sawtooth thud for bombs, arpeggios for power-ups. No audio
-files, nothing to download, nothing to cache.
-
-### 2.9 Records
-
-Arcade rules: three characters, cycled with big up/down buttons (a physical
+Arcade rules for records: three characters, cycled with big up/down buttons (a
 keyboard works too). After every round the score is checked against that game's
 top ten; if it lands, the screen says **NEW RECORD!** or **TOP n!**, takes the
-name, and shows the board with the new row lit. The entry defaults to the last
-name used, so a repeat player just taps OK.
+name, and shows the board with the new row lit. It defaults to the last name
+used, so a repeat player just taps OK. The trophy button shows the full board
+plus lifetime games, points and minutes played.
 
-`engine/scores.js` holds one store for the whole cabinet, keyed by game id, and
-the shell owns the entire flow — so a second minigame gets records, name entry
-and the record notice by calling `ui.end(result)` and nothing else. Settings
-live at `arcade/settings/<game>` under the same shape.
+`engine/scores.js` is one store for the whole cabinet keyed by game id, and the
+shell owns the flow — a new game gets records by calling `ui.end(result)`.
 
-### 2.10 Shipping
+### 2.7 Shipping
 
-`manifest.webmanifest` + a cache-first service worker precaching every file, so
-the game works with the tablet in aeroplane mode. Icons are generated from maths
-by `tools/make-icons.py` (pure stdlib — it writes the PNG bytes itself).
+`manifest.webmanifest` plus a cache-first service worker precaching every file.
+Icons are generated from maths by `tools/make-icons.py` (pure stdlib — it
+writes the PNG bytes itself).
 
-Tapping Play requests fullscreen, locks landscape and takes a wake lock, all in
-`try/catch` so a browser that refuses any of them still plays fine.
+Two things that are easy to get wrong and are handled here:
+
+- The precache fetches with `cache: 'reload'`. A plain `addAll()` may satisfy
+  itself from the browser's HTTP cache, which bakes a stale file into a fresh
+  precache and ships half an old build to a tablet that already installed.
+- The worker refuses to run on localhost, and `tools/serve.py` sends
+  `Cache-Control: no-store`. A cache-first worker in front of a dev server
+  serves yesterday's build over today's edits — and since it also serves its
+  own replacement, it can keep doing so indefinitely.
+
+Tapping Play requests fullscreen, locks landscape and takes a wake lock, none
+of it awaited, so a browser that stalls or refuses cannot block the round.
 
 ---
 
 ## 3. Running it on the tablet
 
-It is hosted on GitHub Pages at
-**https://fabio-carvajal-devx.github.io/fruit-slash/**
+Open **https://fabio-carvajal-devx.github.io/fruit-slash/** in Chrome, then
+menu → *Install app*. After the first load it runs offline.
 
-Open that in Chrome on the tablet, then menu → *Install app*. After the first
-load it runs offline, aeroplane mode included.
-
-Installing to the home screen needs a **secure context**. Serving the folder
-over `http://192.168.x.x` will play fine in the browser but will never offer
-"Add to home screen" — that is why it is on Pages rather than your laptop.
+Installing to the home screen needs a secure context. Serving the folder over
+`http://192.168.x.x` plays fine in the browser but will never offer "Add to
+home screen" — that is why it lives on Pages rather than your laptop.
 
 ### Shipping a change
 
@@ -213,23 +198,30 @@ git add -A && git commit -m "..." && git push
 ```
 
 Pages rebuilds in about a minute. **Bump `CACHE` in `sw.js` in the same
-commit** — the service worker is cache-first, so an unbumped version keeps
-serving the old build to a tablet that already installed it.
+commit**, or a tablet that already installed keeps serving the old build.
 
-## 4. Settings and scores
+## 4. Settings
 
-The trophy on the start screen opens the top ten. The gear opens round length (60/90/120 s), bombs on/off, sound
-on/off, and speed (easy/normal/fast, which scales the tempo ramp). Choices and
-the high score persist in `localStorage`.
+Per game, behind the gear: round length (60s / 90s / 2m / 3m), bombs on/off
+(Fruit Slash), sound, music, and speed (easy / normal / fast, which scales the
+tempo ramp).
 
-## 5. Adding a second game
+## 5. Adding a third game
 
-Implement `enter / step / draw / overlay` from `engine/scene.js`, give it an id,
-then point `main.js` at it. The loop, unit system, blades, particles, audio,
-HUD, settings, theme, leaderboard and PWA plumbing all come for free, and the
-new game looks and behaves like this one because it is literally the same shell.
+Implement `enter / step / draw / overlay` from `engine/scene.js`, add an entry
+to `games/registry.js`, and list its files in `sw.js`. The loop, unit system,
+input, particles, audio, music, HUD, settings, theme, leaderboard and PWA
+plumbing all come for free, and it will look and behave like the other two
+because it is the same shell.
 
 ## 6. Development
 
-`?debug` in the URL exposes `window.__fs = { app, scene, ui }` for tuning from
-the console.
+- `python3 tools/serve.py 8080` — dev server that never lets the browser cache.
+- `?debug` in the URL exposes `window.__fs = { app, ui, music, scene, meta }`.
+
+## 7. Not yet verified on hardware
+
+Tilt steering is written against `deviceorientation` and the screen-angle
+mapping, but this machine has no gyroscope, so it has only been exercised
+through the finger fallback. Worth a two-minute check on the tablet: lean it
+both ways in landscape and confirm the rocket follows.

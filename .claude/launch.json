@@ -1,6 +1,14 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "fruit-slash", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "8080"], "port": 8080 }
+    {
+      "name": "fruit-slash",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/serve.py",
+        "8080"
+      ],
+      "port": 8080
+    }
   ]
 }

@@ -24,7 +24,20 @@ export function guardGestures() {
   document.addEventListener('touchmove', e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
 }
 
+const isDev = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+
+/**
+ * Register the offline worker — but never on localhost. A cache-first worker
+ * in front of a dev server hides every edit you make behind the last build,
+ * and cleaning up after it costs more than it saves.
+ */
 export function registerSW(path = 'sw.js') {
   if (!('serviceWorker' in navigator)) return;
+  if (isDev) {
+    navigator.serviceWorker.getRegistrations()
+      .then(rs => rs.forEach(r => r.unregister())).catch(() => {});
+    caches?.keys?.().then(ks => ks.forEach(k => caches.delete(k))).catch(() => {});
+    return;
+  }
   addEventListener('load', () => navigator.serviceWorker.register(path).catch(() => {}));
 }
