@@ -241,7 +241,10 @@ export default class AsteroidRun extends Scene {
     this.app.particles.explode(b.x + b.r * .6, b.y - 2, '#fff3c4', 1.6);
     this.app.particles.confetti(b.x, b.y, 44);
     this.app.shake = 1;
-    sfx.boom(); sfx.record(); vibrate([50, 40, 80]);
+    sfx.blast(1.7);
+    setTimeout(() => sfx.blast(1.1), 220);
+    setTimeout(() => sfx.record(), 620);
+    vibrate([60, 50, 90]);
     this.hooks.banner('BOSS DOWN!', '#ffe45e');
     this.hooks.music?.(null);            // back to the game's own track
     const pts = 200 * (this.fx.double > 0 ? 2 : 1);
@@ -488,13 +491,13 @@ export default class AsteroidRun extends Scene {
           this.aliens++;
           this.app.particles.explode(t.x, t.y, '#9dff8a', 1.1);
           this.app.shake = Math.max(this.app.shake, .35);
-          sfx.boom(); vibrate(15);
+          sfx.blast(.85); vibrate(15);
           this.addScore(25 * (this.fx.double > 0 ? 2 : 1), t.x, t.y, '#9dff8a');
         } else {
           this.things.splice(j, 1);
           this.shot++;
           this.app.particles.explode(t.x, t.y, '#c9d2e4', t.r > 4.6 ? .9 : .55);
-          sfx.slice(.7);
+          sfx.crash(t.r > 4.6 ? 1.2 : .75);
           this.addScore(5 * (this.fx.double > 0 ? 2 : 1), t.x, t.y, '#c9d2e4');
           if (t.r > 4.6) {                       // big rocks break in two
             for (const dir of [-1, 1]) {
@@ -627,7 +630,7 @@ export default class AsteroidRun extends Scene {
       this.app.particles.sparkle(this.x, shipY, '#8fd4ff', 26, 48);
       this.app.shake = .6;
       this.hurt = HURT_TIME * .6;
-      sfx.power('freeze'); vibrate([20, 20, 20]);
+      sfx.thud(); sfx.power('freeze'); vibrate([20, 20, 20]);
       return;
     }
     void x; void y;
@@ -642,7 +645,7 @@ export default class AsteroidRun extends Scene {
     this.app.shake = 1;
     this.hooks.banner('OUCH!', '#ff6b6b');
     this.hooks.flashBomb();
-    sfx.bomb(); vibrate([40, 30, 60]);
+    sfx.thud(); vibrate([40, 30, 60]);
   }
 
   applyPower(kind, x, y) {

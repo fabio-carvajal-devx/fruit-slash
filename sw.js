@@ -1,5 +1,5 @@
 /* Cache-first service worker. Bump CACHE when you change any file. */
-const CACHE = 'arcade-v10';
+const CACHE = 'arcade-v11';
 
 /* Never run in front of a dev server. A cache-first worker on localhost
    serves yesterday's build over today's edits, and because it also serves

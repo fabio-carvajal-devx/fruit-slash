@@ -185,7 +185,7 @@ export default class FruitSlash extends Scene {
       this.app.particles.smoke(e.x, e.y, 18);
       this.app.particles.sparkle(e.x, e.y, '#ffd166', 22, 55);
       this.app.shake = 1;
-      sfx.bomb(); vibrate([40, 30, 60]);
+      sfx.thud(); sfx.blast(.9); vibrate([40, 30, 60]);
       this.hooks.banner('OOPS!', '#ff6b6b');
       this.hooks.flashBomb();
       this.recent.length = 0; this.comboShown = 0;

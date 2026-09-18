@@ -37,17 +37,18 @@ export function noiseBuffer() { return noiseBuf; }
 
 const t0 = () => ctx.currentTime;
 
-function noise(dur, { type = 'bandpass', freq = 1200, q = 1, gain = .5, sweep = 0 } = {}) {
+function noise(dur, { type = 'bandpass', freq = 1200, q = 1, gain = .5, sweep = 0, delay = 0 } = {}) {
   if (!ctx || !enabled) return;
+  const s = t0() + delay;
   const src = ctx.createBufferSource(); src.buffer = noiseBuf;
   const f = ctx.createBiquadFilter(); f.type = type; f.Q.value = q;
-  f.frequency.setValueAtTime(freq, t0());
-  if (sweep) f.frequency.exponentialRampToValueAtTime(Math.max(60, freq * sweep), t0() + dur);
+  f.frequency.setValueAtTime(freq, s);
+  if (sweep) f.frequency.exponentialRampToValueAtTime(Math.max(40, freq * sweep), s + dur);
   const g = ctx.createGain();
-  g.gain.setValueAtTime(gain, t0());
-  g.gain.exponentialRampToValueAtTime(0.0001, t0() + dur);
+  g.gain.setValueAtTime(gain, s);
+  g.gain.exponentialRampToValueAtTime(0.0001, s + dur);
   src.connect(f); f.connect(g); g.connect(sfxBus);
-  src.start(); src.stop(t0() + dur + .02);
+  src.start(s); src.stop(s + dur + .02);
 }
 
 function tone(freq, dur, { type = 'sine', gain = .3, to = null, delay = 0 } = {}) {
@@ -97,6 +98,33 @@ export const sfx = {
     noise(.34, { type: 'lowpass', freq: 1500, gain: .55, sweep: .15 });
     tone(150, .3, { type: 'sawtooth', gain: .18, to: 50 });
   },
+  /* Three impacts, deliberately far apart in pitch so they never blur:
+     a bright crunch for breaking something, a low thud for taking a hit,
+     and a long layered blast for a kill. */
+  crash(scale = 1) {
+    noise(.26 * scale, { freq: 1000, q: .7, gain: .55, sweep: .18 });
+    noise(.10, { type: 'highpass', freq: 4200, gain: .18, delay: .01 });
+    tone(130, .20 * scale, { type: 'triangle', gain: .22, to: 58 });
+  },
+
+  /** Something hit the ship. Low, dull, no sparkle — it should feel bad. */
+  thud() {
+    tone(92, .46, { type: 'sine', gain: .55, to: 30 });
+    tone(64, .40, { type: 'triangle', gain: .30, to: 26 });
+    noise(.34, { type: 'lowpass', freq: 320, q: .5, gain: .45, sweep: .22 });
+  },
+
+  /** A kill. Big, long, with a crackling tail. */
+  blast(scale = 1) {
+    noise(.85 * scale, { type: 'lowpass', freq: 2400, q: .4, gain: .8, sweep: .06 });
+    tone(124, .70 * scale, { type: 'sine', gain: .5, to: 26 });
+    tone(80, .60 * scale, { type: 'sawtooth', gain: .22, to: 22 });
+    for (let i = 0; i < 5; i++) {
+      noise(.07, { freq: 1800 + Math.random() * 2600, q: 1.4,
+                   gain: .16 * scale, delay: .09 + i * .08 + Math.random() * .05 });
+    }
+  },
+
   alarm() {
     [0, .16, .32].forEach(d => tone(320, .14, { type: 'square', gain: .16, to: 620, delay: d }));
   },

@@ -139,7 +139,21 @@ point in the round can be asked to handle.
 The same intensity curve drives the music, so the soundtrack tightens as the
 round does.
 
-### 2.5 Music
+### 2.5 Impacts
+
+Three impact sounds, deliberately far apart in pitch so they never blur into
+one another:
+
+| | When | Character |
+| --- | --- | --- |
+| `crash` | you break a rock | bright crunch, short |
+| `thud` | something hits **you** | low, dull, no sparkle — it should feel bad |
+| `blast` | a saucer or the boss dies | long, layered, with a crackling tail |
+
+The boss death fires `blast` twice, 220ms apart, so the wreck keeps rolling
+before the fanfare lands. Fruit Slash's bombs use the same language.
+
+### 2.6 Music
 
 `engine/music.js` synthesises a synthwave soundtrack at run time from a pattern
 table — nothing is sampled or downloaded, so it costs zero bytes and works
@@ -154,7 +168,7 @@ If a tab is throttled the scheduler is starved; rather than dumping the backlog
 in a heap it resyncs to the next downbeat. A track may instead name an audio
 `file`, which is streamed and looped — the hook for a licensed recording.
 
-### 2.6 Records and storage
+### 2.7 Records and storage
 
 Everything persists in `localStorage`, under one namespace:
 
@@ -173,7 +187,7 @@ plus lifetime games, points and minutes played.
 `engine/scores.js` is one store for the whole cabinet keyed by game id, and the
 shell owns the flow — a new game gets records by calling `ui.end(result)`.
 
-### 2.7 Shipping
+### 2.8 Shipping
 
 `manifest.webmanifest` plus a cache-first service worker precaching every file.
 Icons are generated from maths by `tools/make-icons.py` (pure stdlib — it
