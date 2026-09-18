@@ -1,5 +1,7 @@
 # Fruit Slash
 
+**Play: https://fabio-carvajal-devx.github.io/fruit-slash/**
+
 A one-button, two-minute fruit-slicing game for kids. Plain HTML + ES modules,
 no build step, no dependencies, installable as a PWA on an Android tablet.
 
@@ -194,21 +196,25 @@ Tapping Play requests fullscreen, locks landscape and takes a wake lock, all in
 
 ## 3. Running it on the tablet
 
-Installing to the home screen needs a **secure context**. `http://192.168.x.x`
-will play in the browser but will not offer "Add to home screen" — you need
-HTTPS or localhost.
+It is hosted on GitHub Pages at
+**https://fabio-carvajal-devx.github.io/fruit-slash/**
+
+Open that in Chrome on the tablet, then menu → *Install app*. After the first
+load it runs offline, aeroplane mode included.
+
+Installing to the home screen needs a **secure context**. Serving the folder
+over `http://192.168.x.x` will play fine in the browser but will never offer
+"Add to home screen" — that is why it is on Pages rather than your laptop.
+
+### Shipping a change
 
 ```bash
-git add -A && git commit -m "Fruit Slash"
-gh repo create fruit-slash --public --source=. --push
+git add -A && git commit -m "..." && git push
 ```
 
-Then Settings → Pages → Branch `main` / root. A minute later the game is at
-`https://<user>.github.io/fruit-slash/`. Open it in Chrome on the tablet,
-menu → *Install app*. After the first load it runs offline.
-
-**When you change a file, bump `CACHE` in `sw.js`.** The worker is cache-first,
-so an unbumped version keeps serving the old build.
+Pages rebuilds in about a minute. **Bump `CACHE` in `sw.js` in the same
+commit** — the service worker is cache-first, so an unbumped version keeps
+serving the old build to a tablet that already installed it.
 
 ## 4. Settings and scores
 
