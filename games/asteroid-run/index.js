@@ -704,8 +704,12 @@ export default class AsteroidRun extends Scene {
       ctx.translate(t.x, t.y);
       if (t.kind === 'rock') { ctx.rotate(t.rot); drawRock(ctx, t.r, t.shape, t.craters); }
       else if (t.kind === 'cell') drawCell(ctx, t.r, tSec);
-      else if (t.kind === 'alien') drawAlien(ctx, t.r, tSec);
-      else if (t.kind === 'eshot') drawEnemyShot(ctx, t.r, tSec);
+      else if (t.kind === 'alien') {
+        drawAlien(ctx, t.r, tSec, '#9dff8a', 1 - clamp(t.fireCd / 0.45, 0, 1));
+      } else if (t.kind === 'eshot') {
+        ctx.rotate(Math.atan2(-t.vx, t.vy));      // tail trails behind the shot
+        drawEnemyShot(ctx, t.r, tSec);
+      }
       else if (t.kind === 'weapon') drawWeaponOrb(ctx, t.weapon, t.r, tSec);
       else drawPower(ctx, t.power, t.r, tSec);
       ctx.restore();
@@ -714,7 +718,8 @@ export default class AsteroidRun extends Scene {
     if (this.boss) {
       ctx.save();
       ctx.translate(this.boss.x, this.boss.y);
-      drawBoss(ctx, this.boss.r, tSec, this.boss.hurt);
+      drawBoss(ctx, this.boss.r, tSec, this.boss.hurt,
+               1 - clamp(this.boss.fireCd / 0.5, 0, 1));
       ctx.restore();
     }
 

@@ -42,6 +42,18 @@ rocks apart, kill saucers, and every three minutes a mothership shows up.
   Taking a hit knocks the gun back to Bolt.
 - **The boss** sweeps overhead, fires slow readable spreads and drops rocks.
   It has a health bar, its own heavier music, and a 200-point bounty.
+- **Enemy fire is always announced.** A saucer's gun glows for nearly half a
+  second before it shoots, the boss's port lights up before a spread, and every
+  shot is drawn with a tail along its own heading, so "incoming" and "where"
+  read at a glance.
+- **Regions.** Every twenty-odd seconds the ship flies into a new one — a sun,
+  deep dark, a fluorescent cloud, a nebula, a black hole. The landmark drifts
+  down through the parallax while the sky cross-fades behind it, so the change
+  is something you fly past rather than a cut.
+
+Stars are stars: small, dim and round, with only a handful bright enough to
+twinkle. An earlier version drew the fast layer as streaks, which read as
+incoming fire and fought the gameplay for attention.
 
 Power-ups: **Shield** (absorbs one hit), **Slow-mo**, **×2**, **+10s**.
 

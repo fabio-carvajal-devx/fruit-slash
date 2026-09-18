@@ -195,8 +195,21 @@ export function drawBullet(ctx, r) {
   ctx.beginPath(); ctx.arc(0, -r * 1.2, r * .34, 0, TAU); ctx.fill();
 }
 
+/** Enemy fire. Drawn with a tail along its own heading so a glance tells
+    you both that it is incoming and exactly where it is going. */
 export function drawEnemyShot(ctx, r, t) {
   const pulse = 1 + Math.sin(t * 16) * .14;
+
+  const tail = ctx.createLinearGradient(0, -r * 5.5, 0, r * .5);
+  tail.addColorStop(0, 'rgba(255,90,200,0)');
+  tail.addColorStop(.65, 'rgba(255,90,200,.28)');
+  tail.addColorStop(1, 'rgba(255,150,225,.55)');
+  ctx.fillStyle = tail;
+  ctx.beginPath();
+  ctx.moveTo(-r * .55, 0);
+  ctx.quadraticCurveTo(0, -r * 6.5, r * .55, 0);
+  ctx.closePath(); ctx.fill();
+
   const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2.2 * pulse);
   g.addColorStop(0, 'rgba(255,140,220,.9)');
   g.addColorStop(.5, 'rgba(220,60,200,.55)');
@@ -204,11 +217,11 @@ export function drawEnemyShot(ctx, r, t) {
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(0, 0, r * 2.2 * pulse, 0, TAU); ctx.fill();
   ctx.fillStyle = '#ffd9f4';
-  ctx.beginPath(); ctx.arc(0, 0, r * .55, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 0, r * .6, 0, TAU); ctx.fill();
 }
 
 /** A saucer. Original shape — dome, hull, running lights. */
-export function drawAlien(ctx, r, t, tint = '#9dff8a') {
+export function drawAlien(ctx, r, t, tint = '#9dff8a', charge = 0) {
   const blink = (Math.sin(t * 5) + 1) / 2;
 
   const glow = ctx.createRadialGradient(0, r * .3, r * .2, 0, r * .3, r * 2.2);
@@ -232,10 +245,20 @@ export function drawAlien(ctx, r, t, tint = '#9dff8a') {
   }
   ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = r * .06;
   ctx.beginPath(); ctx.ellipse(0, r * .05, r, r * .36, 0, 0, TAU); ctx.stroke();
+
+  // charging telegraph: the shot is always announced before it exists
+  if (charge > 0) {
+    const k = charge * charge;
+    const g = ctx.createRadialGradient(0, r * .45, 0, 0, r * .45, r * (.35 + k * .9));
+    g.addColorStop(0, `rgba(255,190,240,${.5 + k * .5})`);
+    g.addColorStop(1, 'rgba(255,90,200,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, r * .45, r * (.35 + k * .9), 0, TAU); ctx.fill();
+  }
 }
 
 /** The mothership. Same language as the saucer, four times the mass. */
-export function drawBoss(ctx, r, t, hurt) {
+export function drawBoss(ctx, r, t, hurt, charge = 0) {
   const blink = (Math.sin(t * 3) + 1) / 2;
 
   const glow = ctx.createRadialGradient(0, r * .2, r * .3, 0, r * .2, r * 2);
@@ -263,9 +286,18 @@ export function drawBoss(ctx, r, t, hurt) {
     ctx.beginPath(); ctx.arc(i * r * .26, r * .2, r * .07, 0, TAU); ctx.fill();
   }
 
-  // the gun port, so the player can read where shots come from
+  // the gun port, so the player can read where shots come from — and it
+  // lights up before it fires, so the spread is never a surprise
   ctx.fillStyle = '#ff5c8a';
   ctx.beginPath(); ctx.ellipse(0, r * .38, r * .18, r * .12, 0, 0, TAU); ctx.fill();
+  if (charge > 0) {
+    const k = charge * charge;
+    const g = ctx.createRadialGradient(0, r * .42, 0, 0, r * .42, r * (.2 + k * .75));
+    g.addColorStop(0, `rgba(255,210,245,${.55 + k * .45})`);
+    g.addColorStop(1, 'rgba(255,90,200,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, r * .42, r * (.2 + k * .75), 0, TAU); ctx.fill();
+  }
 
   ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = r * .04;
   ctx.beginPath(); ctx.ellipse(0, 0, r, r * .42, 0, 0, TAU); ctx.stroke();
